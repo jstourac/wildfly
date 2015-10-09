@@ -161,8 +161,8 @@
                 <xs:attribute name="enabled-protocols" use="optional" type="xs:string"/>
                 <xs:attribute name="enable-http2" use="optional" type="xs:string"/>
                 <xs:attribute name="enable-spdy" use="optional" type="xs:string"/>
-                <xs:attribute name="ssl-session-cache-size" use="optional" type="xs:string"/>
-                <xs:attribute name="ssl-session-timeout" use="optional" type="xs:string"/>
+                <xs:attribute name="ssl-session-cache-size" use="optional" type="xs:int"/>
+                <xs:attribute name="ssl-session-timeout" use="optional" type="xs:int"/>
             </xs:extension>
         </xs:complexContent>
     </xs:complexType>
@@ -340,7 +340,7 @@
         <xs:attribute name="suffix" use="optional" type="xs:string" default=".log"/>
         <xs:attribute name="rotate" use="optional" type="xs:string" default="true"/>
         <xs:attribute name="use-server-log" use="optional" type="xs:string" default="false"/>
-        <xs:attribute name="extended" use="optional" type="xs:string" default="false" />
+        <xs:attribute name="extended" use="optional" type="xs:boolean" default="false" />
         <xs:attribute name="predicate" use="optional" type="xs:string" />
     </xs:complexType>
     <xs:complexType name="errorPageType">
@@ -533,6 +533,6 @@
         <xs:attribute name="connection-idle-timeout" type="xs:int" use="optional" />
         <xs:attribute name="request-queue-size" type="xs:int" use="optional" />
         <xs:attribute name="security-realm" type="xs:string" use="optional" />
-        <xs:attribute name="use-alias" type="xs:string" use="optional" default="false" />
+        <xs:attribute name="use-alias" type="xs:boolean" use="optional" default="false" />
     </xs:complexType>
 </xs:schema>
