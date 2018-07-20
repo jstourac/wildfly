@@ -50,4 +50,12 @@ interface MicroProfileConfigLogger extends BasicLogger {
 
     @Message(id = 2, value = "Unable to load class %s from module %s")
     OperationFailedException unableToLoadClassFromModule(String className, String moduleName);
+
+    @LogMessage(level = INFO)
+    @Message(id = 3, value = "Use directory for MicroProfile Config Source: %s")
+    void loadConfigSourceFromDir(String path);
+
+    @LogMessage(level = INFO)
+    @Message(id = 4, value = "Use class for MicroProfile Config Source: %s")
+    void loadConfigSourceFromClass(Class clazz);
 }
