@@ -139,12 +139,22 @@ public class ConsoleAccessLogTestCase {
         executeOperation(client.getControllerClient(), Operations.createAddOperation(CONSOLE_ACCESS_LOG_ADDRESS));
         sendRequest();
         final Collection<JsonObject> lines = findLines();
-        Assert.assertFalse("Did not fined eventSource in " + stdout.toString(), lines.isEmpty());
+        Assert.assertFalse("Did not find eventSource in " + stdout.toString(), lines.isEmpty());
         for (JsonObject jsonObject : lines) {
             Assert.assertEquals("web-access", jsonObject.getString("eventSource"));
             Assert.assertEquals("default-host", jsonObject.getString("hostName"));
             Assert.assertEquals(HttpStatus.SC_OK, jsonObject.getInt("responseCode"));
         }
+    }
+
+    @Test
+    public void testPredicate() throws Exception {
+        final ModelNode op = Operations.createAddOperation(CONSOLE_ACCESS_LOG_ADDRESS);
+        op.get("predicate").set(false);
+        executeOperation(client.getControllerClient(), op);
+        sendRequest();
+        final Collection<JsonObject> lines = findLines();
+        Assert.assertTrue("Expected no eventSource in " + stdout.toString(), lines.isEmpty());
     }
 
     @Test
@@ -164,7 +174,7 @@ public class ConsoleAccessLogTestCase {
         executeOperation(client.getControllerClient(), op);
         sendRequest();
         final Collection<JsonObject> lines = findLines();
-        Assert.assertFalse("Did not fined eventSource in " + stdout.toString(), lines.isEmpty());
+        Assert.assertFalse("Did not find eventSource in " + stdout.toString(), lines.isEmpty());
         for (JsonObject jsonObject : lines) {
             // First assert all keys are there
             for (String name : ATTRIBUTE_NAMES) {
@@ -205,7 +215,7 @@ public class ConsoleAccessLogTestCase {
         executeOperation(client.getControllerClient(), op);
         sendRequest();
         final Collection<JsonObject> lines = findLines();
-        Assert.assertFalse("Did not fined eventSource in " + stdout.toString(), lines.isEmpty());
+        Assert.assertFalse("Did not find eventSource in " + stdout.toString(), lines.isEmpty());
         for (JsonObject jsonObject : lines) {
             // First assert all keys are there
             for (String key : keys) {
@@ -247,7 +257,7 @@ public class ConsoleAccessLogTestCase {
 
         sendRequest(new BasicNameValuePair("testParam", "testValue"));
         final Collection<JsonObject> lines = findLines();
-        Assert.assertFalse("Did not fined eventSource in " + stdout.toString(), lines.isEmpty());
+        Assert.assertFalse("Did not find eventSource in " + stdout.toString(), lines.isEmpty());
         for (JsonObject jsonObject : lines) {
             Assert.assertEquals("web-access", jsonObject.getString("eventSource"));
             Assert.assertNull("include-host-name attribute was set to false and should not be included in the output.", jsonObject.get("hostName"));
@@ -291,11 +301,14 @@ public class ConsoleAccessLogTestCase {
         TimeUnit.SECONDS.sleep(TimeoutUtil.adjust(1));
         final Collection<JsonObject> result = new ArrayList<>();
         final String[] lines = stdout.toString().split(System.lineSeparator());
+
         for (String line : lines) {
-            try (JsonReader reader = Json.createReader(new StringReader(line))) {
-                final JsonObject jsonObject = reader.readObject();
-                if (jsonObject.get("eventSource") != null) {
-                    result.add(jsonObject);
+            if (!line.isEmpty()) {
+                try (JsonReader reader = Json.createReader(new StringReader(line))) {
+                    final JsonObject jsonObject = reader.readObject();
+                    if (jsonObject.get("eventSource") != null) {
+                        result.add(jsonObject);
+                    }
                 }
             }
         }
