@@ -84,6 +84,7 @@ public class OcspTestBase extends CommonBase {
 
     protected static KeyStore trustStore;
     protected static KeyStore ocspCheckedGoodKeyStore;
+    protected static KeyStore ocspCheckedGoodNoUrlKeyStore;
     protected static KeyStore ocspCheckedRevokedKeyStore;
     protected static KeyStore ocspCheckedUnknownKeyStore;
     protected static KeyStore ocspCheckedTooLongChainKeyStore;
@@ -97,6 +98,7 @@ public class OcspTestBase extends CommonBase {
     protected static final File LADYBIRD_FILE = new File(WORKING_DIR_CA,"ladybird.keystore");
     protected static final File OCSP_RESPONDER_FILE = new File(WORKING_DIR_CA,"ocsp-responder.keystore");
     protected static final File OCSP_CHECKED_GOOD_FILE = new File(WORKING_DIR_CA,"ocsp-checked-good.keystore");
+    protected static final File OCSP_CHECKED_GOOD_NO_URL_FILE = new File(WORKING_DIR_CA,"ocsp-checked-good-no-url.keystore");
     protected static final File OCSP_CHECKED_REVOKED_FILE = new File(WORKING_DIR_CA, "ocsp-checked-revoked.keystore");
     protected static final File OCSP_CHECKED_UNKNOWN_FILE = new File(WORKING_DIR_CA, "ocsp-checked-unknown.keystore");
     protected static final File OCSP_CHECKED_TOO_LONG_CHAIN_FILE =
@@ -106,6 +108,8 @@ public class OcspTestBase extends CommonBase {
     private static final File WORKING_DIR_CACRL = new File(CA_CRL_LOCATION);
     protected static final File CA_BLANK_PEM_CRL = new File(WORKING_DIR_CACRL, "blank.pem");
     protected static final File TRUST_FILE = new File(WORKING_DIR_CA,"ca.truststore");
+
+    protected static final String OCSP_RESPONDER_URL = "http://localhost:" + OCSP_PORT + "/ocsp";
 
     private static KeyStore createKeyStore() throws Exception {
         KeyStore ks = KeyStore.getInstance("JKS");
@@ -139,6 +143,7 @@ public class OcspTestBase extends CommonBase {
     private static X509Certificate issuerCertificate;
     private static X509Certificate intermediateIssuerCertificate;
     private static X509Certificate ocspCheckedGoodCertificate;
+    private static X509Certificate ocspCheckedGoodNoUrlCertificate;
     private static X509Certificate ocspCheckedRevokedCertificate;
     private static X509Certificate ocspCheckedTooLongChainCertificate;
 
@@ -146,8 +151,6 @@ public class OcspTestBase extends CommonBase {
     public static void beforeTest() throws Exception {
         Assert.assertTrue(WORKING_DIR_CA.mkdirs());
         Assert.assertTrue(WORKING_DIR_CACRL.mkdirs());
-
-        final String OCSP_RESPONDER_URL = "http://localhost:" + OCSP_PORT + "/ocsp";
 
         KeyPairGenerator keyPairGenerator = KeyPairGenerator.getInstance("RSA");
         Security.addProvider(new BouncyCastleProvider());
@@ -183,7 +186,8 @@ public class OcspTestBase extends CommonBase {
                 .setSerialNumber(new BigInteger("3"))
                 .addExtension(new BasicConstraintsExtension(false, false, -1))
                 .build();
-        ladybirdKeyStore.setKeyEntry("ladybird", ladybirdSigningKey, PASSWORD_CHAR, new X509Certificate[]{ladybirdCertificate,issuerCertificate});
+        ladybirdKeyStore.setKeyEntry("ladybird", ladybirdSigningKey, PASSWORD_CHAR,
+                new X509Certificate[]{ladybirdCertificate, issuerCertificate});
 
         // Generates certificate and keystore for OCSP responder
         KeyPair ocspResponderKeys = keyPairGenerator.generateKeyPair();
@@ -202,7 +206,8 @@ public class OcspTestBase extends CommonBase {
                 .build();
         KeyStore ocspResponderKeyStore = createKeyStore();
         ocspResponderKeyStore.setCertificateEntry("ca", issuerCertificate);
-        ocspResponderKeyStore.setKeyEntry("ocspResponder", ocspResponderSigningKey, PASSWORD_CHAR, new X509Certificate[]{ocspResponderCertificate,issuerCertificate});
+        ocspResponderKeyStore.setKeyEntry("ocspResponder", ocspResponderSigningKey, PASSWORD_CHAR,
+                new X509Certificate[]{ocspResponderCertificate, issuerCertificate});
         createTemporaryKeyStoreFile(ocspResponderKeyStore, OCSP_RESPONDER_FILE, PASSWORD_CHAR);
 
         // Generates GOOD certificate referencing the OCSP responder
@@ -223,8 +228,29 @@ public class OcspTestBase extends CommonBase {
                 ))).build();
         ocspCheckedGoodKeyStore = createKeyStore();
         ocspCheckedGoodKeyStore.setCertificateEntry("ca", issuerCertificate);
-        ocspCheckedGoodKeyStore.setKeyEntry("localhost", ocspCheckedGoodSigningKey, PASSWORD_CHAR, new X509Certificate[]{ocspCheckedGoodCertificate,issuerCertificate});
+        ocspCheckedGoodKeyStore.setKeyEntry("localhost", ocspCheckedGoodSigningKey, PASSWORD_CHAR,
+                new X509Certificate[]{ocspCheckedGoodCertificate, issuerCertificate});
         createTemporaryKeyStoreFile(ocspCheckedGoodKeyStore, OCSP_CHECKED_GOOD_FILE, PASSWORD_CHAR);
+
+        // Generates GOOD certificate but not referencing OCSP responder
+        KeyPair ocspCheckedGoodNoUrlKeys = keyPairGenerator.generateKeyPair();
+        PrivateKey ocspCheckedGoodNoUrlSigningKey = ocspCheckedGoodNoUrlKeys.getPrivate();
+        PublicKey ocspCheckedGoodNoUrlPublicKey = ocspCheckedGoodNoUrlKeys.getPublic();
+
+        ocspCheckedGoodNoUrlCertificate = new X509CertificateBuilder()
+                .setIssuerDn(issuerDN)
+                .setSubjectDn(new X500Principal("OU=Elytron, O=Elytron, C=UK, ST=Elytron, CN=localhost"))
+                .setSignatureAlgorithmName("SHA1withRSA")
+                .setSigningKey(issuerSelfSignedX509CertificateAndSigningKey.getSigningKey())
+                .setPublicKey(ocspCheckedGoodNoUrlPublicKey)
+                .setSerialNumber(new BigInteger("53"))
+                .addExtension(new BasicConstraintsExtension(false, false, -1))
+                .build();
+        ocspCheckedGoodNoUrlKeyStore = createKeyStore();
+        ocspCheckedGoodNoUrlKeyStore.setCertificateEntry("ca", issuerCertificate);
+        ocspCheckedGoodNoUrlKeyStore.setKeyEntry("localhost", ocspCheckedGoodNoUrlSigningKey, PASSWORD_CHAR,
+                new X509Certificate[]{ocspCheckedGoodNoUrlCertificate, issuerCertificate});
+        createTemporaryKeyStoreFile(ocspCheckedGoodNoUrlKeyStore, OCSP_CHECKED_GOOD_NO_URL_FILE, PASSWORD_CHAR);
 
         // Generates REVOKED certificate referencing the OCSP responder
         KeyPair ocspCheckedRevokedKeys = keyPairGenerator.generateKeyPair();
@@ -310,6 +336,9 @@ public class OcspTestBase extends CommonBase {
                 new X509Certificate[]{ocspCheckedTooLongChainCertificate, intermediateIssuerCertificate, issuerCertificate});
         createTemporaryKeyStoreFile(ocspCheckedTooLongChainKeyStore, OCSP_CHECKED_TOO_LONG_CHAIN_FILE, PASSWORD_CHAR);
 
+
+        trustStore.setCertificateEntry("mykey2",intermediateIssuerCertificate); // TODO shall we need this? :/ I would expect that only root one is necessary
+
         prepareCrlFiles(intermediateIssuerCertificate, issuerSelfSignedX509CertificateAndSigningKey);
 
         // Create the temporary files
@@ -320,10 +349,12 @@ public class OcspTestBase extends CommonBase {
     public static void startOcspServer() throws Exception {
         ocspServer = new TestingOcspServer(OCSP_PORT);
         ocspServer.createIssuer(1, issuerCertificate);
+        ocspServer.createIssuer(2, intermediateIssuerCertificate); //TODO - hm, do we need this?
         ocspServer.createCertificate(1, 1, ocspCheckedGoodCertificate);
         ocspServer.createCertificate(2, 1, ocspCheckedRevokedCertificate);
         ocspServer.revokeCertificate(2, 4);
         ocspServer.createCertificate(3, 2, ocspCheckedTooLongChainCertificate);
+        ocspServer.createCertificate(4, 1, ocspCheckedGoodNoUrlCertificate);
 
         ocspServer.start();
     }
@@ -349,9 +380,67 @@ public class OcspTestBase extends CommonBase {
                         .build(issuerSelfSignedX509CertificateAndSigningKey.getSigningKey())
         );
 
+        //        // Creates the CRL for ica/crl/blank.pem
+        //        X509v2CRLBuilder icaBlankCrlBuilder = new X509v2CRLBuilder(
+        //                convertSunStyleToBCStyle(intermediateIssuerDN),
+        //                currentDate
+        //        );
+        //        X509CRLHolder icaBlankCrlHolder = icaBlankCrlBuilder.setNextUpdate(nextYear).build(
+        //                new JcaContentSignerBuilder("SHA256withRSA")
+        //                        .setProvider("BC")
+        //                        .build(intermediateIssuerSigningKey)
+        //        );
+        //
+        //        // Creates the CRL for firefly-revoked.pem
+        //        X509v2CRLBuilder fireflyRevokedCrlBuilder = new X509v2CRLBuilder(
+        //                convertSunStyleToBCStyle(issuerCertificate.getSubjectDN()),
+        //                currentDate
+        //        );
+        //        fireflyRevokedCrlBuilder.addCRLEntry(
+        //                new BigInteger("1"),
+        //                revokeDate,
+        //                CRLReason.unspecified
+        //        );
+        //        X509CRLHolder fireflyRevokedCrlHolder = fireflyRevokedCrlBuilder.setNextUpdate(nextYear).build(
+        //                new JcaContentSignerBuilder("SHA1withRSA")
+        //                        .setProvider("BC")
+        //                        .build(issuerSelfSignedX509CertificateAndSigningKey.getSigningKey())
+        //        );
+        //
+        //        // Creates the CRL for ica-revoked.pem
+        //        X509v2CRLBuilder icaRevokedCrlBuilder = new X509v2CRLBuilder(
+        //                convertSunStyleToBCStyle(issuerCertificate.getSubjectDN()),
+        //                currentDate
+        //        );
+        //        icaRevokedCrlBuilder.addCRLEntry(
+        //                new BigInteger("6"),
+        //                revokeDate,
+        //                CRLReason.unspecified
+        //        );
+        //        X509CRLHolder icaRevokedCrlHolder = icaRevokedCrlBuilder.setNextUpdate(nextYear).build(
+        //                new JcaContentSignerBuilder("SHA1withRSA")
+        //                        .setProvider("BC")
+        //                        .build(issuerSelfSignedX509CertificateAndSigningKey.getSigningKey())
+        //        );
+
         PemWriter caBlankCrlOutput = new PemWriter(new OutputStreamWriter(new FileOutputStream(CA_BLANK_PEM_CRL)));
+        //        PemWriter icaBlankCrlOutput = new PemWriter(new OutputStreamWriter(new FileOutputStream(ICA_BLANK_PEM_CRL)));
+        //        PemWriter blankBlankCrlOutput = new PemWriter(new OutputStreamWriter(new FileOutputStream(BLANK_BLANK_PEM_CRL)));
+        //        PemWriter fireflyRevokedCrlOutput = new PemWriter(new OutputStreamWriter(new FileOutputStream(FIREFLY_REVOKED_PEM_CRL)));
+        //        PemWriter icaRevokedCrlOutput = new PemWriter(new OutputStreamWriter(new FileOutputStream(ICA_REVOKED_PEM_CRL)));
+
         caBlankCrlOutput.writeObject(new MiscPEMGenerator(caBlankCrlHolder));
+        //        icaBlankCrlOutput.writeObject(new MiscPEMGenerator(icaBlankCrlHolder));
+        //        blankBlankCrlOutput.writeObject(new MiscPEMGenerator(icaBlankCrlHolder));
+        //        blankBlankCrlOutput.writeObject(new MiscPEMGenerator(caBlankCrlHolder));
+        //        fireflyRevokedCrlOutput.writeObject(new MiscPEMGenerator(fireflyRevokedCrlHolder));
+        //        icaRevokedCrlOutput.writeObject(new MiscPEMGenerator(icaRevokedCrlHolder));
+
         caBlankCrlOutput.close();
+        //        icaBlankCrlOutput.close();
+        //        blankBlankCrlOutput.close();
+        //        fireflyRevokedCrlOutput.close();
+        //        icaRevokedCrlOutput.close();
     }
 
     public static void stopOcspServer() throws Exception {
@@ -364,6 +453,7 @@ public class OcspTestBase extends CommonBase {
         Assert.assertTrue(LADYBIRD_FILE.delete());
         Assert.assertTrue(OCSP_RESPONDER_FILE.delete());
         Assert.assertTrue(OCSP_CHECKED_GOOD_FILE.delete());
+        Assert.assertTrue(OCSP_CHECKED_GOOD_NO_URL_FILE.delete());
         Assert.assertTrue(OCSP_CHECKED_REVOKED_FILE.delete());
         Assert.assertTrue(OCSP_CHECKED_UNKNOWN_FILE.delete());
         Assert.assertTrue(OCSP_CHECKED_TOO_LONG_CHAIN_FILE.delete());
