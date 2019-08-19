@@ -526,6 +526,8 @@ public class OcspTestBase extends CommonBase {
 
         CredentialReference serverKeyStoreCredRef = CredentialReference.builder().withClearText(PASSWORD).build();
 
+        CredentialReference ocspResponderKeyStoreCredRef = CredentialReference.builder().withClearText(PASSWORD).build();
+
         // Prepare server key-store and key-manager for server ssl context
         Path serverKeyStorePath = Path.builder().withPath(LADYBIRD_FILE.getAbsolutePath()).build();
 
@@ -543,7 +545,15 @@ public class OcspTestBase extends CommonBase {
                 serverKeyStoreCredRef).withType("JKS").withPath(serverTrustStorePath).build();
         elements.add(serverTrustStore);
 
-        Ocsp ocsp = Ocsp.builder().withPreferCrls(false).build();
+        //add ocspResponder key store
+        Path ocspResponderKeyStorePath = Path.builder().withPath(OCSP_RESPONDER_FILE.getAbsolutePath()).build();
+        SimpleKeyStore ocspResponderKeyStore = SimpleKeyStore.builder().withName("ocspResponderKeyStore").withCredentialReference(
+                ocspResponderKeyStoreCredRef).withType("JKS").withPath(ocspResponderKeyStorePath).build();
+        elements.add(ocspResponderKeyStore);
+
+        Ocsp ocsp = Ocsp.builder().withPreferCrls(false).withResponderKeyStore("ocspResponderKeyStore").withResponderCertificate("ocspResponder").build();
+
+        //Ocsp ocsp = Ocsp.builder().withPreferCrls(false).build();
 
         CertificateRevocationList crl =
                 CertificateRevocationList.builder().withPath(CA_BLANK_PEM_CRL.getAbsolutePath()).build();
