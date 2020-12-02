@@ -102,6 +102,10 @@
                     <dependenciesToScan>
                         <dependency>org.eclipse.microprofile.reactive-streams-operators:microprofile-reactive-streams-operators-tck</dependency>
                     </dependenciesToScan>
+                    <environmentVariables>
+                        <!-- Let's loose the default timeout for TCK tests since in some cases (Windows mainly) this is not enough. -->
+                        <DEFAULT_TIMEOUT_MILLIS>200</DEFAULT_TIMEOUT_MILLIS>
+                    </environmentVariables>
                     <systemPropertyVariables>
                         <microprofile.jvm.args>${microprofile.jvm.args}</microprofile.jvm.args>
                         <!-- Override the standard module path that points at the shared module set from servlet-dist -->
